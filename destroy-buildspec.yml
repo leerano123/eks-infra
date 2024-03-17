@@ -1,0 +1,23 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.12
+    commands:
+      - echo Installing Terraform...
+      - curl -o terraform.zip https://releases.hashicorp.com/terraform/1.6.6/terraform_1.6.6_linux_amd64.zip
+      - unzip terraform.zip
+      - sudo mv terraform /usr/local/bin/
+      - terraform --version
+  pre_build:
+    commands:
+      - cd ${CODEBUILD_SRC_DIR}/${CODE_SRC_DIR}
+      # - export WG_PUBLIC_KEY=$(aws secretsmanager get-secret-value --secret-id wg-public-key --query SecretString --output text | jq -r .WG_PUBLIC_KEY)
+      # - export WG_PRIVATE_KEY=$(aws secretsmanager get-secret-value --secret-id wg-private-key --query SecretString --output text | jq -r .WG_PRIVATE_KEY)
+      - export KEYCLOAK_USER_PASSWORD=$(aws secretsmanager get-secret-value --secret-id keycloak-secret --query SecretString --output text | jq -r .KEYCLOAK_USER_PASSWORD)
+      - cd eks-kubeflow
+      - terraform init -reconfigure
+  build:
+    commands:
+      - terraform destroy -auto-approve -var "environment=dev" -var "KEYCLOAK_USER_PASSWORD=$KEYCLOAK_USER_PASSWORD"
